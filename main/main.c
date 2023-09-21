@@ -106,7 +106,7 @@ void uart_task(void* pvParameters)
             led1_duty = led_duty;
             xSemaphoreGive(led1_mutex);
 
-            printf("LED 1 Adjusted.");
+            printf("LED 1 Adjusted.\n");
           }
           else if (led_selected == 2)
           {
@@ -115,7 +115,7 @@ void uart_task(void* pvParameters)
             led2_duty = led_duty;
             xSemaphoreGive(led2_mutex);
 
-            printf("LED 2 Adjusted.");
+            printf("LED 2 Adjusted.\n");
           }
           else if (led_selected == 3)
           {
@@ -124,7 +124,7 @@ void uart_task(void* pvParameters)
             led3_duty = led_duty;
             xSemaphoreGive(led3_mutex);
 
-            printf("LED 3 Adjusted.");
+            printf("LED 3 Adjusted.\n");
           }
           else if (led_selected == 4)
           {
@@ -133,11 +133,12 @@ void uart_task(void* pvParameters)
             led4_duty = led_duty;
             xSemaphoreGive(led4_mutex);
 
-            printf("LED 4 Adjusted.");
+            printf("LED 4 Adjusted.\n");
           }
+          app_state = INPUT_LED;
           printf("State: %d\n", app_state);
         }
-        break;    
+        break;
     }
     vTaskDelay(pdMS_TO_TICKS(UART_DELAY_MS));
   }
