@@ -11,10 +11,18 @@
 #define LED3_PIN 22
 #define LED4_PIN 23
 
+#define LED1_STATE 1
+#define LED2_STATE 2
+#define LED3_STATE 3
+#define LED4_STATE 4
+
 #define ECHO_TEST_TXD (1)
 #define ECHO_TEST_RXD (3)
 #define UART_DELAY_MS 100
 #define BUF_SIZE (1024)
+
+#define INPUT_LED 1
+#define INPUT_PERIOD 2
 
 SemaphoreHandle_t led1_mutex, led2_mutex, led3_mutex, led4_mutex;
 
@@ -51,7 +59,8 @@ void init_setup()
   };
   uart_param_config(UART_NUM_0, &uart_config);
   uart_set_pin(UART_NUM_0, ECHO_TEST_TXD, ECHO_TEST_RXD, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
-  uart_driver_install(UART_NUM_0, BUF_SIZE * 2, BUF_SIZE * 2, 10, NULL, 0);
+  // uart_driver_install(UART_NUM_0, BUF_SIZE * 2, BUF_SIZE * 2, 10, NULL, 0);
+  uart_driver_install(UART_NUM_0, BUF_SIZE * 2, 0, 0, NULL, 0);
 
   // Create Mutex
   led1_mutex = xSemaphoreCreateMutex();
@@ -60,104 +69,75 @@ void init_setup()
   led4_mutex = xSemaphoreCreateMutex();  
 }
 
-void uart_task(void *pvParameters)
+void uart_task(void* pvParameters)
 {
-  uint8_t buffer[128], led_selected;
+  char t_buf[8], led_buf[8];
+  uint8_t led_selected, app_state = 1;
   uint32_t led_period;
-  float led_duty;
+  float led_duty = 0.5;  
 
   printf("===== LED CONFIGURATION =====\n");
-  printf("[PIN 1-4],[PERIOD_IN_MS],[DUTY]\n");
-  printf("Ex: 1,250,0.5\n");
+  printf("Input LED Pin then Period Time\n");
+  printf("Ex: 1 (enter) 500\n");
 
   while (1)
   {
-    int len = uart_read_bytes(UART_NUM_0, buffer, sizeof(buffer), pdMS_TO_TICKS(UART_DELAY_MS));
-    
-    if (len > 0)
-    {      
-      buffer[len] = '\0';
-      
-      char *token;
-      token = strtok((char *)buffer, "/");
+    switch (app_state)
+    {
+      case INPUT_LED:
+        if (uart_read_bytes(UART_NUM_0, led_buf, sizeof(led_buf), pdMS_TO_TICKS(100)) > 0)
+        {
+          led_selected = atoi(led_buf);
+          app_state = INPUT_PERIOD;
+          printf("LED: %d\n", led_selected);
+          printf("State: %d\n", app_state);
+        }
+        break;
 
-      // Receive the selected LED
-      if (token != NULL)
-      {
-        led_selected = (uint8_t)atoi(token);
-      }
-      else
-      {
-        continue;
-      }
+      case INPUT_PERIOD:
+        if (uart_read_bytes(UART_NUM_0, t_buf, sizeof(t_buf), pdMS_TO_TICKS(100)) > 0)
+        {
+          led_period = atoi(t_buf);
 
-      // Receive the LED period
-      token = strtok(NULL, "/");
-      if (token != NULL)
-      {
-        led_period = (uint32_t)atoi(token);
-      }
-      else
-      {
-        continue;
-      }
+          if (led_selected == 1)
+          {
+            xSemaphoreTake(led1_mutex, portMAX_DELAY);
+            led1_period = led_period;
+            led1_duty = led_duty;
+            xSemaphoreGive(led1_mutex);
 
-      // Receive the LED duty
-      token = strtok(NULL, "/");
-      if (token != NULL)
-      {
-        led_duty = atof(token);
-      }
-      else
-      {
-        continue;
-      }
+            printf("LED 1 Adjusted.");
+          }
+          else if (led_selected == 2)
+          {
+            xSemaphoreTake(led2_mutex, portMAX_DELAY);
+            led2_period = led_period;
+            led2_duty = led_duty;
+            xSemaphoreGive(led2_mutex);
 
-      switch (led_selected)
-      {
-        case 1:
-          xSemaphoreTake(led1_mutex, portMAX_DELAY);
-          led1_period = led_period;
-          led1_duty = led_duty;
-          xSemaphoreGive(led1_mutex);
+            printf("LED 2 Adjusted.");
+          }
+          else if (led_selected == 3)
+          {
+            xSemaphoreTake(led3_mutex, portMAX_DELAY);
+            led3_period = led_period;
+            led3_duty = led_duty;
+            xSemaphoreGive(led3_mutex);
 
-          printf("LED 1 Adjusted.");
+            printf("LED 3 Adjusted.");
+          }
+          else if (led_selected == 4)
+          {
+            xSemaphoreTake(led4_mutex, portMAX_DELAY);
+            led4_period = led_period;
+            led4_duty = led_duty;
+            xSemaphoreGive(led4_mutex);
 
-          break;
-
-        case 2:
-          xSemaphoreTake(led2_mutex, portMAX_DELAY);
-          led2_period = led_period;
-          led2_duty = led_duty;
-          xSemaphoreGive(led2_mutex);
-
-          printf("LED 2 Adjusted.");
-
-          break;
-          
-        case 3:
-          xSemaphoreTake(led3_mutex, portMAX_DELAY);
-          led3_period = led_period;
-          led3_duty = led_duty;
-          xSemaphoreGive(led3_mutex);
-
-          printf("LED 3 Adjusted.");
-
-          break;
-          
-        case 4:
-          xSemaphoreTake(led4_mutex, portMAX_DELAY);
-          led4_period = led_period;
-          led4_duty = led_duty;
-          xSemaphoreGive(led4_mutex);
-
-          printf("LED 4 Adjusted.");
-
-          break;
-          
-        default:
-          break;
-      }
+            printf("LED 4 Adjusted.");
+          }
+          printf("State: %d\n", app_state);
+        }
+        break;    
     }
     vTaskDelay(pdMS_TO_TICKS(UART_DELAY_MS));
   }
@@ -169,7 +149,7 @@ void blink_led(uint8_t pin, uint32_t period, float duty)
   gpio_set_level(pin, 0);
   vTaskDelay(pdMS_TO_TICKS((uint32_t)(((float)period) * duty)));
   gpio_set_level(pin, 1);
-  vTaskDelay(pdMS_TO_TICKS((uint32_t)(((float)period) * (1.0 - duty))));
+  vTaskDelay(pdMS_TO_TICKS((uint32_t)(((float)period) * (1.0 - duty))));  
 }
 
 // LED 1 Task
