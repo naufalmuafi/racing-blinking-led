@@ -26,10 +26,10 @@
 
 SemaphoreHandle_t led1_mutex, led2_mutex, led3_mutex, led4_mutex;
 
-uint32_t led1_period = 300,
-         led2_period = 400,
+uint32_t led1_period = 500,
+         led2_period = 500,
          led3_period = 500,
-         led4_period = 600;
+         led4_period = 500;
 
 float led1_duty = 0.5,
       led2_duty = 0.5,
@@ -58,15 +58,14 @@ void init_setup()
       .rx_flow_ctrl_thresh = 122
   };
   uart_param_config(UART_NUM_0, &uart_config);
-  uart_set_pin(UART_NUM_0, ECHO_TEST_TXD, ECHO_TEST_RXD, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
-  // uart_driver_install(UART_NUM_0, BUF_SIZE * 2, BUF_SIZE * 2, 10, NULL, 0);
+  uart_set_pin(UART_NUM_0, ECHO_TEST_TXD, ECHO_TEST_RXD, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);  
   uart_driver_install(UART_NUM_0, BUF_SIZE * 2, 0, 0, NULL, 0);
 
   // Create Mutex
   led1_mutex = xSemaphoreCreateMutex();
   led2_mutex = xSemaphoreCreateMutex();
   led3_mutex = xSemaphoreCreateMutex();
-  led4_mutex = xSemaphoreCreateMutex();  
+  led4_mutex = xSemaphoreCreateMutex();
 }
 
 void uart_task(void* pvParameters)
@@ -78,7 +77,7 @@ void uart_task(void* pvParameters)
 
   printf("===== LED CONFIGURATION =====\n");
   printf("Input LED Pin then Period Time\n");
-  printf("Ex: 1 (enter) 500\n");
+  printf("Ex: 1 (enter) 500\n");  
 
   while (1)
   {
@@ -89,8 +88,7 @@ void uart_task(void* pvParameters)
         {
           led_selected = atoi(led_buf);
           app_state = INPUT_PERIOD;
-          printf("LED: %d\n", led_selected);
-          printf("State: %d\n", app_state);
+          printf("LED: %d\n\nINPUT PERIOD TIME", led_selected);          
         }
         break;
 
@@ -106,7 +104,7 @@ void uart_task(void* pvParameters)
             led1_duty = led_duty;
             xSemaphoreGive(led1_mutex);
 
-            printf("LED 1 Adjusted.\n");
+            printf("LED 1 Adjusted.\n\nINPUT LED PIN");
           }
           else if (led_selected == 2)
           {
@@ -115,7 +113,7 @@ void uart_task(void* pvParameters)
             led2_duty = led_duty;
             xSemaphoreGive(led2_mutex);
 
-            printf("LED 2 Adjusted.\n");
+            printf("LED 2 Adjusted.\n\nINPUT LED PIN");
           }
           else if (led_selected == 3)
           {
@@ -124,7 +122,7 @@ void uart_task(void* pvParameters)
             led3_duty = led_duty;
             xSemaphoreGive(led3_mutex);
 
-            printf("LED 3 Adjusted.\n");
+            printf("LED 3 Adjusted.\n\nINPUT LED PIN");
           }
           else if (led_selected == 4)
           {
@@ -133,10 +131,9 @@ void uart_task(void* pvParameters)
             led4_duty = led_duty;
             xSemaphoreGive(led4_mutex);
 
-            printf("LED 4 Adjusted.\n");
+            printf("LED 4 Adjusted.\n\nINPUT LED PIN");
           }
-          app_state = INPUT_LED;
-          printf("State: %d\n", app_state);
+          app_state = INPUT_LED;          
         }
         break;
     }
