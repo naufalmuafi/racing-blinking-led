@@ -11,11 +11,14 @@
 #define LED3_PIN 22
 #define LED4_PIN 23
 
+#define ECHO_TEST_TXD (1)
+#define ECHO_TEST_RXD (3)
 #define UART_DELAY_MS 100
+#define BUF_SIZE (1024)
 
 SemaphoreHandle_t led1_mutex, led2_mutex, led3_mutex, led4_mutex;
 
-uint16_t led1_period = 300,
+uint32_t led1_period = 300,
          led2_period = 400,
          led3_period = 500,
          led4_period = 600;
@@ -43,9 +46,12 @@ void init_setup()
       .data_bits = UART_DATA_8_BITS,
       .parity = UART_PARITY_DISABLE,
       .stop_bits = UART_STOP_BITS_1,
-      .flow_ctrl = UART_HW_FLOWCTRL_DISABLE};
-  uart_param_config(UART_NUM_0, &uart_config);  
-  uart_driver_install(UART_NUM_0, 1028 * 2, 1028 * 2, 10, NULL, 0);
+      .flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
+      .rx_flow_ctrl_thresh = 122
+  };
+  uart_param_config(UART_NUM_0, &uart_config);
+  uart_set_pin(UART_NUM_0, ECHO_TEST_TXD, ECHO_TEST_RXD, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
+  uart_driver_install(UART_NUM_0, BUF_SIZE * 2, BUF_SIZE * 2, 10, NULL, 0);
 
   // Create Mutex
   led1_mutex = xSemaphoreCreateMutex();
@@ -60,14 +66,15 @@ void uart_task(void *pvParameters)
   uint32_t led_period;
   float led_duty;
 
-  printf("===== LED CONFIGURATION =====");
-  printf("[PIN 1-4],[PERIOD_IN_MS],[DUTY]");
-  printf("Ex: 1,250,0.5");
+  printf("===== LED CONFIGURATION =====\n");
+  printf("[PIN 1-4],[PERIOD_IN_MS],[DUTY]\n");
+  printf("Ex: 1,250,0.5\n");
 
   while (1)
   {
     int len = uart_read_bytes(UART_NUM_0, buffer, sizeof(buffer), pdMS_TO_TICKS(UART_DELAY_MS));
-    if (len != 0)
+    
+    if (len > 0)
     {      
       buffer[len] = '\0';
       
